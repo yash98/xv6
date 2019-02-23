@@ -133,6 +133,7 @@ char*syscalls[] = {
 "sys_toggle",
 "sys_print_count",
 "sys_add",
+"sys_ps",
 };
   for (int i=0; i<totalSysCallNum; i++) {
 		cprintf("%s:%d\n",syscalls[i], timesSysCallsUsed[i]);
@@ -145,4 +146,8 @@ int sys_add(int a, int b) {
 	argint(1,&b);
 	int sum = a + b;
 	return sum;
+}
+
+int sys_ps(void) {
+	return ps();
 }

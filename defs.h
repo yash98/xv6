@@ -122,6 +122,7 @@ void            wakeup(void*);
 void            yield(void);
 
 // add new to proc.c
+int             ps(void);
 
 // swtch.S
 void            swtch(struct context**, struct context*);

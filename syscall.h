@@ -1,5 +1,5 @@
 // System call numbers
-#define totalSysCallNum     24
+#define totalSysCallNum     25
 #define SYS_fork             1
 #define SYS_exit             2
 #define SYS_wait             3
@@ -24,3 +24,4 @@
 #define SYS_toggle          22
 #define SYS_print_count     23
 #define SYS_add             24
+#define SYS_ps              25
