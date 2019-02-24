@@ -134,6 +134,8 @@ char*syscalls[] = {
 "sys_print_count",
 "sys_add",
 "sys_ps",
+"sys_send",
+"sys_recv",
 };
   for (int i=0; i<totalSysCallNum; i++) {
 		cprintf("%s:%d\n",syscalls[i], timesSysCallsUsed[i]);
@@ -150,4 +152,21 @@ int sys_add(int a, int b) {
 
 int sys_ps(void) {
 	return ps();
+}
+
+int sys_send(int sender_pid, int rec_pid, void* msg) {
+	argint(0, &sender_pid);
+	argint(1, &rec_pid);
+	char* char_msg = (char*) msg;
+	// cprintf("%d\n", char_msg);
+	// cprintf("%d\n", msg);
+	argstr(2, &char_msg);
+	// cprintf("%s\n", char_msg);
+	return send(sender_pid, rec_pid, (void*) char_msg);
+}
+
+int sys_recv(void* msg) {
+	char* char_msg = (char*) msg;
+	argstr(0, &char_msg);
+	return recv((void*)char_msg);
 }

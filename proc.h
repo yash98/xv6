@@ -56,3 +56,5 @@ struct proc {
 //   original data and bss
 //   fixed-size stack
 //   expandable heap
+
+#define MSGSIZE 8
