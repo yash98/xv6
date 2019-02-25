@@ -11,6 +11,9 @@
 struct {
   char message_store[NPROC][200*MSGSIZE];
   int info[NPROC][3];
+  int waiting_for_recv[NPROC];
+  struct spinlock letter_box_locks[NPROC];
+  int chan_start;
   int max_q_size;
 } msg_q_arr;
 
@@ -21,8 +24,12 @@ void init_msg_q_arr() {
     msg_q_arr.info[i][0] = 0;
     msg_q_arr.info[i][1] = 0;
     msg_q_arr.info[i][2] = 0;
+    msg_q_arr.waiting_for_recv[i] = 0;
+    char* lk_name = "lb_lk";
+    initlock(&msg_q_arr.letter_box_locks[i], lk_name);
   }
   msg_q_arr.max_q_size = 200*MSGSIZE;
+  msg_q_arr.chan_start = 1000;
   is_msg_q_arr_init = 1;
 }
 
@@ -479,9 +486,11 @@ wakeup1(void *chan)
 {
   struct proc *p;
 
-  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
-    if(p->state == SLEEPING && p->chan == chan)
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+    if(p->state == SLEEPING && p->chan == chan) {
       p->state = RUNNABLE;
+    }
+  }
 }
 
 // Wake up all processes sleeping on chan.
@@ -562,63 +571,78 @@ int ps(void) {
   // [RUNNING]   "run   ",
   // [ZOMBIE]    "zombie"
   // };
-  // int count = 0;
 	for (int i=0; i<NPROC; i++) {
     struct proc* p = &ptable.proc[i];
     if (p->state!=UNUSED) {
 		  // cprintf("pid:%d name:%s state:%s\n", p->pid, p->name, states[p->state]);
 		  cprintf("pid:%d name:%s\n", p->pid, p->name);
-      // cprintf("%d", ++count);
     }
 	}
   return 25;
 }
 
+int get_ptable_index(int id) {
+  int pt_index = -1;
+  for (int i=0; i<NPROC; i++) {
+    struct proc* p = &ptable.proc[i];
+    if (p->pid == id) {
+      pt_index = i;
+      break;
+    }
+  }
+  return pt_index;
+}
+
 int send(int sender_pid, int rec_pid, void *msg) {
-  // if (is_msg_q_arr_init==0) {
-  //   init_msg_q_arr();
-  // }
-  // cprintf("SEND\n");
-  if (msg_q_arr.info[rec_pid][2]==msg_q_arr.max_q_size) {
+  int pt_index = get_ptable_index(rec_pid);
+  if (msg_q_arr.info[pt_index][2]>=msg_q_arr.max_q_size) {
     return -1;
   }
 
+  acquire(&(msg_q_arr.letter_box_locks[pt_index]));
+
   char* char_msg = (char*) msg;
-  int tail = msg_q_arr.info[rec_pid][1];
+  int tail = msg_q_arr.info[pt_index][1];
   for (int i=0; i<MSGSIZE; i++) {
-    // cprintf("toWrite: %d\n", (int) *(char_msg+i));
-    msg_q_arr.message_store[rec_pid][tail+i] = *(char_msg+i);
-    // cprintf("written: %d\n", (int) msg_q_arr.message_store[rec_pid][tail+i]);
+    msg_q_arr.message_store[pt_index][tail+i] = *(char_msg+i);
   }
-  // cprintf("msg: %s\n", char_msg);
-  msg_q_arr.info[rec_pid][1] = (msg_q_arr.info[rec_pid][1]+MSGSIZE)%msg_q_arr.max_q_size;
-  msg_q_arr.info[rec_pid][2] += MSGSIZE;
+  msg_q_arr.info[pt_index][1] = (msg_q_arr.info[pt_index][1]+MSGSIZE)%msg_q_arr.max_q_size;
+  msg_q_arr.info[pt_index][2] += MSGSIZE;
+
+  release(&(msg_q_arr.letter_box_locks[pt_index]));
+  
+  if (msg_q_arr.waiting_for_recv[pt_index] == 1) {
+    struct proc* chan;
+    chan = &ptable.proc[pt_index];
+    wakeup(chan);
+    msg_q_arr.waiting_for_recv[pt_index] = 0;
+  }
+
   return 0;
 }
 
 int recv(void* msg) {
-  // if (is_msg_q_arr_init==0) {
-  //   init_msg_q_arr();
-  // }
-  // cprintf("RECV\n");
   int rec_pid = myproc()->pid;
-  // cprintf("rec_pid:%d\n", rec_pid);
-  if (msg_q_arr.info[rec_pid][2]==0) {
-    return -1;
+  int pt_index = get_ptable_index(rec_pid);
+  acquire(&(msg_q_arr.letter_box_locks[pt_index]));
+
+  if (msg_q_arr.info[pt_index][2]<=0) {
+    msg_q_arr.waiting_for_recv[pt_index] = 1;
+    struct proc* chan;
+    chan = &ptable.proc[pt_index];
+    cprintf("slept: %d\n", rec_pid);
+    sleep(chan, &msg_q_arr.letter_box_locks[pt_index]);
   }
 
   char* char_msg = (char*) msg;
-  int head = msg_q_arr.info[rec_pid][0];
-  // cprintf("msg: %s\n", char_msg);
+  int head = msg_q_arr.info[pt_index][0];
   for (int i=0; i<MSGSIZE; i++) {
-    // cprintf("prev: %d\n", (int) *(char_msg+i));
-    *(char_msg+i) = msg_q_arr.message_store[rec_pid][head+i]; 
-    // cprintf("toWrite: %d\n", (int) msg_q_arr.message_store[rec_pid][head+i]);
-    // cprintf("new: %d\n", (int) *(char_msg+i));
+    *(char_msg+i) = msg_q_arr.message_store[pt_index][head+i]; 
   }
 
-  // cprintf("msg: %s\n", char_msg);
-  msg_q_arr.info[rec_pid][0] = (msg_q_arr.info[rec_pid][0]+MSGSIZE)%msg_q_arr.max_q_size;
-  msg_q_arr.info[rec_pid][2] -= MSGSIZE;
+  msg_q_arr.info[pt_index][0] = (msg_q_arr.info[pt_index][0]+MSGSIZE)%msg_q_arr.max_q_size;
+  msg_q_arr.info[pt_index][2] -= MSGSIZE;
+
+  release(&(msg_q_arr.letter_box_locks[pt_index]));
   return 0;
 }

@@ -155,18 +155,23 @@ int sys_ps(void) {
 }
 
 int sys_send(int sender_pid, int rec_pid, void* msg) {
-	argint(0, &sender_pid);
-	argint(1, &rec_pid);
+	if (argint(0, &sender_pid) < 0) {
+		return -1;
+	}
+	if (argint(1, &rec_pid) < 0) {
+		return -1;
+	}
 	char* char_msg = (char*) msg;
-	// cprintf("%d\n", char_msg);
-	// cprintf("%d\n", msg);
-	argstr(2, &char_msg);
-	// cprintf("%s\n", char_msg);
+	if (argstr(2, &char_msg) < 0) {
+		return -1;
+	}
 	return send(sender_pid, rec_pid, (void*) char_msg);
 }
 
 int sys_recv(void* msg) {
 	char* char_msg = (char*) msg;
-	argstr(0, &char_msg);
+	if (argstr(0, &char_msg) < 0) {
+		return -1;
+	}
 	return recv((void*)char_msg);
 }
