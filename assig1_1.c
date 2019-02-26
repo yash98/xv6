@@ -10,7 +10,9 @@ main(void)
 	int cid = fork();
 	if(cid!=0){
 		print_count();
+		// sleep(100);
 		toggle();		
 	}
+	// sleep(1000);
 	exit();
 }

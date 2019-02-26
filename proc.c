@@ -609,8 +609,6 @@ int send(int sender_pid, int rec_pid, void *msg) {
   msg_q_arr.info[pt_index][1] = (msg_q_arr.info[pt_index][1]+MSGSIZE)%msg_q_arr.max_q_size;
   msg_q_arr.info[pt_index][2] += MSGSIZE;
 
-  release(&(msg_q_arr.letter_box_locks[pt_index]));
-  
   if (msg_q_arr.waiting_for_recv[pt_index] == 1) {
     struct proc* chan;
     chan = &ptable.proc[pt_index];
@@ -618,6 +616,7 @@ int send(int sender_pid, int rec_pid, void *msg) {
     msg_q_arr.waiting_for_recv[pt_index] = 0;
   }
 
+  release(&(msg_q_arr.letter_box_locks[pt_index]));
   return 0;
 }
 
@@ -630,7 +629,6 @@ int recv(void* msg) {
     msg_q_arr.waiting_for_recv[pt_index] = 1;
     struct proc* chan;
     chan = &ptable.proc[pt_index];
-    cprintf("slept: %d\n", rec_pid);
     sleep(chan, &msg_q_arr.letter_box_locks[pt_index]);
   }
 

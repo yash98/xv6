@@ -1,6 +1,7 @@
 #include "types.h"
 #include "stat.h"
 #include "user.h"
+#define MSGSIZE 8
 
 int main(void)
 {
@@ -14,11 +15,13 @@ int main(void)
 		while(stat==-1){
 			stat = recv(msg);
 		}
+		sleep(100);
 		printf(1,"2 CHILD: msg recv is: %s \n", msg );
 
 		exit();
 	}else{
 		// This is parent
+		sleep(100);
 		char *msg_child = (char *)malloc(MSGSIZE);
 		msg_child = "P";
 		send(getpid(),cid,msg_child);	
@@ -26,6 +29,6 @@ int main(void)
 		
 		free(msg_child);
 	}
-	
+	wait();
 	exit();
 }

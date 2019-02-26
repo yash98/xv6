@@ -95,12 +95,12 @@ extern int traceSyscalls;
 extern int timesSysCallsUsed[totalSysCallNum];
 
 int sys_toggle(void) {
-  if (traceSyscalls) {
+  if (traceSyscalls == 1) {
     traceSyscalls = 0;
   } else {
-      traceSyscalls = 1;
-      for (int i=0; i<totalSysCallNum; i++) {
-      timesSysCallsUsed[i] = 0;
+		traceSyscalls = 1;
+		for (int i=0; i<totalSysCallNum; i++) {
+			timesSysCallsUsed[i] = 0;
     }
   }
   cprintf("trace set to %d\n", traceSyscalls);
@@ -108,7 +108,7 @@ int sys_toggle(void) {
 }
 
 int sys_print_count(void) {
-char*syscalls[] = {
+char* syscalls[] = {
 "sys_fork",
 "sys_exit",
 "sys_wait",
@@ -138,7 +138,9 @@ char*syscalls[] = {
 "sys_recv",
 };
   for (int i=0; i<totalSysCallNum; i++) {
-		cprintf("%s:%d\n",syscalls[i], timesSysCallsUsed[i]);
+		if (timesSysCallsUsed[i] != 0) {
+			cprintf("%s %d\n",syscalls[i], timesSysCallsUsed[i]);
+		}
 	}
 	return 23;
 }
