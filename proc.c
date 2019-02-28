@@ -33,6 +33,19 @@ void init_msg_q_arr() {
   is_msg_q_arr_init = 1;
 }
 
+int get_ptable_index(int id) {
+  int pt_index = -1;
+  for (int i=0; i<NPROC; i++) {
+    struct proc* p = &ptable.proc[i];
+    if (p->pid == id) {
+      pt_index = i;
+      break;
+    }
+  }
+  return pt_index;
+}
+
+
 struct {
   struct spinlock lock;
   struct proc proc[NPROC];
@@ -268,6 +281,13 @@ exit(void)
       curproc->ofile[fd] = 0;
     }
   }
+
+  // reset message queue
+  int pt_index = get_ptable_index(curproc->pid);
+  msg_q_arr.info[pt_index][0] = 0;
+  msg_q_arr.info[pt_index][1] = 0;
+  msg_q_arr.info[pt_index][2] = 0;
+  // mesg queue reset complete
 
   begin_op();
   iput(curproc->cwd);
@@ -579,18 +599,6 @@ int ps(void) {
     }
 	}
   return 25;
-}
-
-int get_ptable_index(int id) {
-  int pt_index = -1;
-  for (int i=0; i<NPROC; i++) {
-    struct proc* p = &ptable.proc[i];
-    if (p->pid == id) {
-      pt_index = i;
-      break;
-    }
-  }
-  return pt_index;
 }
 
 int send(int sender_pid, int rec_pid, void *msg) {

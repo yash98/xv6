@@ -3,12 +3,6 @@
 #include "user.h"
 #include "spinlock.h"
 
-// struct spinlock s;
-
-// extern void initlock(struct spinlock*, char*);
-// extern void acquire(struct spinlock*);
-// extern void release(struct spinlock*);
-
 int array_sum(short* start_pos_array, short* last_pos_array) {
 	int local_sum = 0;
 	for (short* i=start_pos_array; i<last_pos_array; i++) {
@@ -89,8 +83,6 @@ main(int argc, char *argv[])
 		}
 		child_pid_arr[children_spawned-1] = cid;
 	}
-
-	// initlock(&s, "c");
 
 	float mean;
 	if (cid!=0) {
